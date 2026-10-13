@@ -56,7 +56,7 @@
                 </div>
             </div>
             <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
-                <i class="fa-solid fa-shield-halved"></i> Zero-Memory Leak Engine
+                <i class="fa-solid fa-shield-halved"></i> Background Processing Active
             </span>
         </div>
     </header>
@@ -66,7 +66,7 @@
         
         <div class="text-center space-y-3">
             <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Convert Heavy PDFs Instantly</h2>
-            <p class="text-slate-400 max-w-lg mx-auto text-sm">Optimized for large documents. Download individual pages instantly or bundle them into a ZIP file.</p>
+            <p class="text-slate-400 max-w-lg mx-auto text-sm">Aap doosre tab mein bhi ja sakte hain, conversion background mein chalti rahegi!</p>
         </div>
 
         <div class="glass-card border border-slate-800/80 rounded-3xl p-6 sm:p-10 shadow-2xl relative">
@@ -80,7 +80,7 @@
                     </div>
                     <div>
                         <p class="font-semibold text-slate-200">Drop your large PDF here, or <span class="text-indigo-400 underline">browse file</span></p>
-                        <p class="text-xs text-slate-400 mt-1">Supports massive multi-GB documents via streaming</p>
+                        <p class="text-xs text-slate-400 mt-1">Supports massive multi-GB documents</p>
                     </div>
                 </div>
             </div>
@@ -190,7 +190,7 @@
                 progressContainer.classList.add('hidden');
                 outputSection.classList.remove('hidden');
 
-            } cm (err) {
+            } catch (err) {
                 console.error(err);
                 progressContainer.classList.add('hidden');
                 alert('Error processing file. Ensure it is a valid unprotected PDF document.');
@@ -207,8 +207,8 @@
             const zip = new JSZip();
             const folder = zip.folder("converted_images");
 
+            convertedImages.convertedImages = convertedImages || [];
             convertedImages.forEach((img) => {
-                // Base64 data url se header strip karke data extract karein
                 const base64Data = img.url.replace(/^data:image\/jpeg;base64,/, "");
                 folder.file(img.name, base64Data, { base64: true });
             });
