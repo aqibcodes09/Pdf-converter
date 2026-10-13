@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StreamPDF™ - High Performance PDF to Image Converter</title>
+    <title>StreamPDF™ - Advanced PDF to Image Converter</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
@@ -25,6 +25,8 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
     </script>
+    <!-- JSZip CDN for single ZIP file download -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -64,7 +66,7 @@
         
         <div class="text-center space-y-3">
             <h2 class="text-3xl sm:text-4xl font-extrabold tracking-tight">Convert Heavy PDFs Instantly</h2>
-            <p class="text-slate-400 max-w-lg mx-auto text-sm">Optimized for large documents. Processes pages efficiently without crashing your browser tab.</p>
+            <p class="text-slate-400 max-w-lg mx-auto text-sm">Optimized for large documents. Download individual pages instantly or bundle them into a ZIP file.</p>
         </div>
 
         <div class="glass-card border border-slate-800/80 rounded-3xl p-6 sm:p-10 shadow-2xl relative">
@@ -96,10 +98,10 @@
 
             <!-- Results Output Section -->
             <div id="output-section" class="hidden mt-8 pt-6 border-t border-slate-800 space-y-4">
-                <div class="flex items-center justify-between">
+                <div class="flex flex-wrap items-center justify-between gap-3">
                     <h4 class="font-bold text-slate-200 text-base" id="output-title">Converted Pages</h4>
-                    <button id="download-all-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white text-xs px-4 py-2 rounded-xl font-medium transition shadow-lg shadow-indigo-600/20 flex items-center gap-2">
-                        <i class="fa-solid fa-download"></i> Download All as ZIP/Batch
+                    <button id="download-zip-btn" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs px-4 py-2.5 rounded-xl font-medium transition shadow-lg shadow-emerald-600/20 flex items-center gap-2">
+                        <i class="fa-solid fa-file-zipper"></i> Download All as ZIP File
                     </button>
                 </div>
                 <div id="image-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4 max-h-[450px] overflow-y-auto pr-2">
@@ -125,7 +127,7 @@
         const outputSection = document.getElementById('output-section');
         const imageGrid = document.getElementById('image-grid');
         const outputTitle = document.getElementById('output-title');
-        const downloadAllBtn = document.getElementById('download-all-btn');
+        const downloadZipBtn = document.getElementById('download-zip-btn');
 
         let convertedImages = [];
 
@@ -143,7 +145,6 @@
                 progressBar.style.width = `5%`;
                 progressPercentage.textContent = `5%`;
 
-                // Use typed array loading to optimize heavy files
                 const arrayBuffer = await file.arrayBuffer();
                 const loadingTask = pdfjsLib.getDocument({ data: arrayBuffer });
                 const pdfDoc = await loadingTask.promise;
@@ -158,7 +159,6 @@
                     progressPercentage.textContent = `${percent}%`;
 
                     const page = await pdfDoc.getPage(i);
-                    // Moderate scale to balance quality and low memory consumption
                     const viewport = page.getViewport({ scale: 1.2 });
                     
                     const canvas = document.createElement('canvas');
@@ -168,14 +168,12 @@
 
                     await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
-                    // Convert canvas to compressed JPEG data URL
                     const imgUrl = canvas.toDataURL('image/jpeg', 0.85);
                     convertedImages.push({ name: `page_${i}.jpg`, url: imgUrl });
 
-                    // Clean up page resources immediately to prevent memory overload
                     page.cleanup();
 
-                    // Render Card
+                    // Render Card with individual download button
                     const card = document.createElement('div');
                     card.className = "bg-slate-900/60 border border-slate-800 rounded-2xl p-4 flex flex-col items-center gap-3 shadow-sm";
                     card.innerHTML = `
@@ -190,28 +188,44 @@
 
                 progressStatus.textContent = "Conversion Complete successfully!";
                 progressContainer.classList.add('hidden');
-                outputSection.classList.remove('condensed');
                 outputSection.classList.remove('hidden');
 
-            } catch (err) {
+            } cm (err) {
                 console.error(err);
                 progressContainer.classList.add('hidden');
                 alert('Error processing file. Ensure it is a valid unprotected PDF document.');
             }
         });
 
-        // Batch Download Helper
-        downloadAllBtn.addEventListener('click', () => {
-            convertedImages.forEach((img, index) => {
-                setTimeout(() => {
-                    const a = document.createElement('a');
-                    a.href = img.url;
-                    a.download = img.name;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                }, index * 200);
+        // Single ZIP File Download Logic using JSZip
+        downloadZipBtn.addEventListener('click', async () => {
+            if (convertedImages.length === 0) return;
+
+            downloadZipBtn.disabled = true;
+            downloadZipBtn.innerHTML = `<i class="fa-solid fa-spinner animate-spin"></i> Creating ZIP...`;
+
+            const zip = new JSZip();
+            const folder = zip.folder("converted_images");
+
+            convertedImages.forEach((img) => {
+                // Base64 data url se header strip karke data extract karein
+                const base64Data = img.url.replace(/^data:image\/jpeg;base64,/, "");
+                folder.file(img.name, base64Data, { base64: true });
             });
+
+            const content = await zip.generateAsync({ type: "blob" });
+            const blobUrl = URL.createObjectURL(content);
+
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = "all_pdf_images.zip";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(blobUrl);
+
+            downloadZipBtn.disabled = false;
+            downloadZipBtn.innerHTML = `<i class="fa-solid fa-file-zipper"></i> Download All as ZIP File`;
         });
     </script>
 </body>
